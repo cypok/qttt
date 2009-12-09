@@ -29,8 +29,7 @@ class Remote:
         type = "POST"
         data = "update[human_message]=%s" % text
         res = json.loads(self.http.request(url, type, data)[1])
-        print res
-        return True
+        return (res.get(u'error') is None), res
 
 class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
     def messageBox(self, title, text):
@@ -63,10 +62,16 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         if text.isEmpty():
             return
 
-        if self.remote.sendUpdate(text):
+        res = self.remote.sendUpdate(text)
+        if res[0]:
             self.messageBox(u"Отправка апдейта", u"Апдейт успешно отправлен")
         else:
-            self.messageBox(u"Отправка апдейта", u"Произошла неизвестная и ужасная ошибка")
+            errors = res[1][u'error']
+            if len(res[1][u'error']) > 1:
+                text = u"Произошли ошибки:\n%s"
+            else:
+                text = u"Произошла ошибка:\n%s"
+            self.messageBox(u"Отправка апдейта", text % u"\n".join(errors))
 
 
 
