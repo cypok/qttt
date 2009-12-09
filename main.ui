@@ -78,7 +78,14 @@
      </layout>
     </item>
     <item>
-     <widget class="QListView" name="listView"/>
+     <widget class="QPlainTextEdit" name="te_updates">
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+      <property name="plainText">
+       <string>Updates list:</string>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>
@@ -88,7 +95,7 @@
      <x>0</x>
      <y>0</y>
      <width>616</width>
-     <height>26</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">

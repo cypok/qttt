@@ -31,6 +31,12 @@ class Remote:
         res = json.loads(self.http.request(url, type, data)[1])
         return (res.get(u'error') is None), res
 
+    def getUpdates(self):
+        url = "%s/updates.json?%s" % (self.getConfig("base_url"), urllib.urlencode({'api_key':self.getConfig('api_key'),'limit':15}))
+        type = "GET"
+        res = json.loads(self.http.request(url, type)[1])
+        return res
+
 class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
     def messageBox(self, title, text):
         box = QtGui.QMessageBox()
@@ -56,8 +62,22 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.connect(self.pb_update, QtCore.SIGNAL("clicked()"), self.sendUpdate)
         self.connect(self.le_update, QtCore.SIGNAL("returnPressed()"), self.sendUpdate)
 
+        self.timer = QtCore.QTimer()
+        self.timer.setInterval(5*60*1000) # 5 minutes
+        self.connect(self.timer, QtCore.SIGNAL("timeout()"), self.getUpdates)
+        self.timer.start()
+
+        self.getUpdates()
+
+    def showUpdates(self, updates):
+        arr = []
+        for upd in updates:
+            arr.append( u"@%(nick)s: %(msg)s" % {'nick': upd['user']['nickname'], 'msg': upd['human_message']} )
+        self.te_updates.setPlainText(u"\n".join(arr))
 
     def sendUpdate(self):
+        self.getUpdates()
+
         text = self.le_update.text()
         if text.isEmpty():
             return
@@ -65,15 +85,19 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         res = self.remote.sendUpdate(text)
         if res[0]:
             self.messageBox(u"Отправка апдейта", u"Апдейт успешно отправлен")
+            self.le_update.clear()
+
         else:
-            errors = res[1][u'error']
-            if len(res[1][u'error']) > 1:
+            errors = res[1]['error']
+            if len(res[1]['error']) > 1:
                 text = u"Произошли ошибки:\n%s"
             else:
                 text = u"Произошла ошибка:\n%s"
-            self.messageBox(u"Отправка апдейта", text % u"\n".join(errors))
+            self.messageBox(u"Отправка апдейта", text % "\n".join(errors))
 
-
+    def getUpdates(self):
+        res = self.remote.getUpdates()
+        self.showUpdates(res)
 
 
 app = QtGui.QApplication(sys.argv)
