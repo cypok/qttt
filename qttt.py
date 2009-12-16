@@ -92,7 +92,12 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
     def showUpdates(self, updates):
         arr = []
         for upd in updates:
-            arr.append( u"@%(nick)s: %(msg)s" % {'nick': upd['user']['nickname'], 'msg': upd['human_message']} )
+            s = u"@%(nick)s: %(msg)s" % {
+                        'nick': upd['user']['nickname'],
+                        'msg': upd['human_message']}
+            if upd['kind'] == 'update':
+                s += u" (%s ч.)" % (upd['hours'] if upd.get('hours') else "...")
+            arr.append(s)
         self.te_updates.setPlainText(u"\n".join(arr))
 
     def showLastUpdate(self, update):
