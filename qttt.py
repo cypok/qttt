@@ -98,7 +98,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
             if upd['kind'] == 'update':
                 s += u" (%s ч.)" % (upd['hours'] if upd.get('hours') else "...")
             arr.append(s)
-        self.te_updates.setPlainText(u"\n".join(arr))
+        self.te_updates.setPlainText(u"\n\n".join(arr))
 
     def showLastUpdate(self, update):
         if update is None:
