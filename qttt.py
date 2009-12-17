@@ -31,7 +31,7 @@ class Remote:
     def sendUpdate(self, text):
         url = "%s/updates.json?%s" % (self.getConfig("base_url"), urllib.urlencode({'api_key':self.getConfig('api_key')}))
         type = "POST"
-        data = "update[human_message]=%s" % text
+        data = "update[human_message]=%s" % unicode(text).encode('utf-8')
         res = json.loads(self.http.request(url, type, data)[1])
         return (res.get('error') is None), res
 
