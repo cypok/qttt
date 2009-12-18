@@ -74,6 +74,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
         self.setWindowTitle("QTTT - %s" % self.remote.getConfig('base_url'))
 
+        self.connect(self.action_Qt,    QtCore.SIGNAL("activated()"),       QtGui.qApp.aboutQt)
         self.connect(self.pb_update,    QtCore.SIGNAL("clicked()"),         self.sendUpdate)
         self.connect(self.le_update,    QtCore.SIGNAL("returnPressed()"),   self.sendUpdate)
         self.connect(self.pb_stop,      QtCore.SIGNAL("clicked()"),         self.finishLast)
