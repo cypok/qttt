@@ -53,12 +53,6 @@ class Remote:
         json.loads(self.http.request(url, type)[1])
 
 class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
-    def messageBox(self, title, text):
-        box = QtGui.QMessageBox()
-        box.setWindowTitle(title)
-        box.setText(text)
-        return box.exec_()
-
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
 
@@ -67,9 +61,17 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setupUi(self)
 
+        self.tray = QtGui.QSystemTrayIcon(self)
+        
+        icon = QtGui.QIcon('icon.png')
+        self.tray.setIcon(icon)
+        self.setWindowIcon(icon)
+        
+        self.tray.show()
+
         self.gb_current.hide()
 
-        self.move(400, 100)
+        self.move(400, 50)
         self.resize(350, 550)
 
         self.setWindowTitle("QTTT - %s" % self.remote.getConfig('base_url'))
@@ -78,6 +80,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.connect(self.pb_update,    QtCore.SIGNAL("clicked()"),         self.sendUpdate)
         self.connect(self.le_update,    QtCore.SIGNAL("returnPressed()"),   self.sendUpdate)
         self.connect(self.pb_stop,      QtCore.SIGNAL("clicked()"),         self.finishLast)
+        self.connect(self.tray,         QtCore.SIGNAL("activated(QSystemTrayIcon::ActivationReason)"), self.trayActivated)
 
         self.refresh_timer = QtCore.QTimer()
         self.refresh_timer.setInterval(5*60*1000) # 5 minutes
@@ -89,6 +92,11 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.connect(self.last_update_timer, QtCore.SIGNAL("timeout()"), self.refreshLastUpdateTime)
 
         self.getUpdates()
+
+    def showMessage(self, title, message, status=None, only_status=False):
+        self.statusBar().showMessage(status if status else message, 5000)
+        if not only_status:
+            self.tray.showMessage(title, message)
 
     def showUpdates(self, updates):
         arr = []
@@ -125,7 +133,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
         res = self.remote.sendUpdate(text)
         if res[0]:
-            self.messageBox(u"Отправка апдейта", u"Апдейт успешно отправлен")
+            self.showMessage(u"Отправка апдейта", u"Апдейт успешно отправлен", only_status = True)
             self.le_update.clear()
 
         else:
@@ -134,7 +142,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 text = u"Произошли ошибки:\n%s"
             else:
                 text = u"Произошла ошибка:\n%s"
-            self.messageBox(u"Отправка апдейта", text % "\n".join(errors))
+            self.showMessage(u"Отправка апдейта", text % "\n".join(errors), u"Произошли ошибки")
 
         self.getUpdates()
 
@@ -148,6 +156,17 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
     def finishLast(self):
         self.remote.finishLast()
         self.getUpdates()
+
+    def closeEvent(self, event):
+        # TODO: в трей, если нажат крестик
+        # если Файл->Выход или Ctrl-Q то закрыть программу
+        pass
+
+    def trayActivated(self, reason):
+        if reason in (  QtGui.QSystemTrayIcon.DoubleClick,
+                        QtGui.QSystemTrayIcon.Trigger,
+                        QtGui.QSystemTrayIcon.MiddleClick ):
+            self.setVisible(not self.isVisible())
 
 
 app = QtGui.QApplication(sys.argv)
