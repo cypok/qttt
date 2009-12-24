@@ -78,13 +78,20 @@
      </layout>
     </item>
     <item>
-     <widget class="QPlainTextEdit" name="te_updates">
-      <property name="readOnly">
+     <widget class="QScrollArea" name="sa_updates">
+      <property name="widgetResizable">
        <bool>true</bool>
       </property>
-      <property name="plainText">
-       <string>Updates list:</string>
-      </property>
+      <widget class="QWidget" name="scrollAreaWidgetContents">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>602</width>
+         <height>301</height>
+        </rect>
+       </property>
+      </widget>
      </widget>
     </item>
    </layout>

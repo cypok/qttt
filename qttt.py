@@ -76,6 +76,9 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
         self.setWindowTitle("QTTT - %s" % self.remote.getConfig('base_url'))
 
+        self.updates_layout = QtGui.QVBoxLayout(self.scrollAreaWidgetContents)
+        self.updates_layout.setMargin(1)
+
         self.connect(self.action_Qt,    QtCore.SIGNAL("activated()"),       QtGui.qApp.aboutQt)
         self.connect(self.pb_update,    QtCore.SIGNAL("clicked()"),         self.sendUpdate)
         self.connect(self.le_update,    QtCore.SIGNAL("returnPressed()"),   self.sendUpdate)
@@ -91,6 +94,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.last_update_timer.setInterval(1000) # 1 second
         self.connect(self.last_update_timer, QtCore.SIGNAL("timeout()"), self.refreshLastUpdateTime)
 
+        self.updates = []
         self.getUpdates()
 
     def showMessage(self, title, message, status=None, only_status=False):
@@ -98,16 +102,16 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         if not only_status:
             self.tray.showMessage(title, message)
 
-    def showUpdates(self, updates):
-        arr = []
-        for upd in updates:
-            s = u"@%(nick)s: %(msg)s" % {
-                        'nick': upd['user']['nickname'],
-                        'msg': upd['human_message']}
-            if upd['kind'] == 'update':
-                s += u" (%s ч.)" % (upd['hours'] if upd.get('hours') else "...")
-            arr.append(s)
-        self.te_updates.setPlainText(u"\n\n".join(arr))
+    def showUpdate(self, upd):
+        s = u"<b><font color='#3f0afe'>@%(nick)s</font></b>: %(msg)s" % {
+                    'nick': upd['user']['nickname'],
+                    'msg': upd['human_message']}
+        if upd['kind'] == 'update':
+            s += u" <b><font color='#3d8811'>(%s ч.)</font></b>" % (upd['hours'] if upd.get('hours') else "...")
+        widget = QtGui.QTextBrowser(self.sa_updates)
+        widget.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        widget.setHtml(s)
+        self.updates_layout.insertWidget(0, widget)
 
     def showLastUpdate(self, update):
         if update is None:
@@ -147,8 +151,12 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.getUpdates()
 
     def getUpdates(self):
-        res = self.remote.getUpdates()
-        self.showUpdates(res)
+        updates = self.remote.getUpdates()
+        updates.reverse() # cause we got reversed in time array
+        for upd in updates:
+            if upd not in self.updates:
+                self.showUpdate(upd)
+                self.updates.append(upd)
 
         res = self.remote.getLastUpdate()
         self.showLastUpdate(res)
