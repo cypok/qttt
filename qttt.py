@@ -22,7 +22,7 @@ class Remote:
         if len(sys.argv) > 1:
             config_file = sys.argv[1]
         else:
-            config_file = os.environ['HOME']+'/.tttrc'
+            config_file = os.path.expanduser("~")+'/.tttrc'
         with open(config_file) as f:
             self.config = yaml.load(f.read())
         self.http = httplib2.Http()
