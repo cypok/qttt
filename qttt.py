@@ -15,6 +15,8 @@ import dateutil.parser
 import dateutil.tz
 import dateutil.relativedelta
 
+from update import Update
+
 class Remote:
     def __init__(self):
         if len(sys.argv) > 1:
@@ -94,7 +96,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.last_update_timer.setInterval(1000) # 1 second
         self.connect(self.last_update_timer, QtCore.SIGNAL("timeout()"), self.refreshLastUpdateTime)
 
-        self.updates = []
+        self.updates = {}
+        self.last_update = None
         self.getUpdates()
 
     def showMessage(self, title, message, status=None, only_status=False):
@@ -103,26 +106,19 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
             self.tray.showMessage(title, message)
 
     def showUpdate(self, upd):
-        s = u"<b><font color='#3f0afe'>@%(nick)s</font></b>: %(msg)s" % {
-                    'nick': upd['user']['nickname'],
-                    'msg': upd['human_message']}
-        if upd['kind'] == 'update':
-            s += u" <b><font color='#3d8811'>(%s ч.)</font></b>" % (upd['hours'] if upd.get('hours') else "...")
-        widget = QtGui.QTextBrowser(self.sa_updates)
-        widget.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        widget.setHtml(s)
-        self.updates_layout.insertWidget(0, widget)
+        upd.widget.setParent(self.sa_updates)
+        self.updates_layout.insertWidget(0, upd.widget)
 
-    def showLastUpdate(self, update):
-        if update is None:
-            self.last_update_timer.stop()
-            self.gb_current.hide()
-        else:
-            self.lb_current.setText(update['human_message'])
-            self.last_update_started_at = dateutil.parser.parse(update['started_at'])
-            self.refreshLastUpdateTime()
-            self.last_update_timer.start()
-            self.gb_current.show()
+    def showLastUpdate(self, u):
+        self.lb_current.setText(u.message)
+        self.last_update_started_at = dateutil.parser.parse(u.started_at) # it's easy to remember this time
+        self.refreshLastUpdateTime()
+        self.last_update_timer.start()
+        self.gb_current.show()
+    
+    def hideLastUpdate(self):
+        self.last_update_timer.stop()
+        self.gb_current.hide()
 
     def refreshLastUpdateTime(self):
         now = datetime.datetime.now(dateutil.tz.tzlocal())
@@ -151,15 +147,29 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.getUpdates()
 
     def getUpdates(self):
-        updates = self.remote.getUpdates()
-        updates.reverse() # cause we got reversed in time array
-        for upd in updates:
-            if upd not in self.updates:
-                self.showUpdate(upd)
-                self.updates.append(upd)
+        # get all updates
+        all_updates = self.remote.getUpdates()
+        last_update = self.remote.getLastUpdate()
 
-        res = self.remote.getLastUpdate()
-        self.showLastUpdate(res)
+        all_updates.reverse() # cause we got reversed in time array
+        for upd in all_updates:
+            if upd['id'] in self.updates:
+                # refresh if it is needed
+                old = self.updates[upd['id']]
+                if old.updated_at < upd['updated_at']:
+                    old.refresh(upd)
+            else:
+                # create and show
+                self.updates[upd['id']] = Update(upd)
+                self.showUpdate( self.updates[upd['id']] )
+
+        # check we can now render last_update
+        if last_update is None:
+            self.hideLastUpdate()
+        else:
+            if last_update['id'] in self.updates:
+                self.showLastUpdate(self.updates[last_update['id']])
+            
 
     def finishLast(self):
         self.remote.finishLast()
