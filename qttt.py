@@ -76,6 +76,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.move(400, 50)
         self.resize(350, 550)
 
+        self.lb_current.setWordWrap(True)
         self.setWindowTitle("QTTT - %s" % self.remote.getConfig('base_url'))
 
         self.updates_layout = QtGui.QVBoxLayout(self.scrollAreaWidgetContents)
