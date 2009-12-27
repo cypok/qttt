@@ -17,48 +17,87 @@ import dateutil.relativedelta
 
 from update import Update
 
-class Remote:
+class Config:
+    @staticmethod
+    def set_if_empty(d, key, value):
+        if key not in d:
+            d[key] = value
+
     def __init__(self):
         if len(sys.argv) > 1:
-            config_file = sys.argv[1]
+            self.config_file = sys.argv[1]
         else:
-            config_file = os.path.expanduser("~")+'/.tttrc'
-        with open(config_file) as f:
-            self.config = yaml.load(f.read())
+            self.config_file = os.path.expanduser('~')+'/.tttrc'
+        self.data = {}
+
+    def read(self):
+        with open(self.config_file) as f:
+            self.data = yaml.load(f.read())
+
+    def write(self):
+        with open(self.config_file, 'w') as f:
+            f.write( yaml.dump(self.data, default_flow_style = False, explicit_start = True) )
+
+    def __getitem__(self, item):
+        return self.data.get(item)
+    
+    def __setitem__(self, item, value):
+        self.date[item] = value
+
+    def set_defaults(self):
+        self.set_if_empty(self.data, 'qttt', {})
+
+        self.set_if_empty(self.data['qttt'], 'geometry', {})
+
+        self.set_if_empty(self.data['qttt']['geometry'], 'left', 400)
+        self.set_if_empty(self.data['qttt']['geometry'], 'top', 50)
+        self.set_if_empty(self.data['qttt']['geometry'], 'width', 350)
+        self.set_if_empty(self.data['qttt']['geometry'], 'height', 550)
+
+
+class Remote:
+    def __init__(self, config):
+        self.api_key = config['site']['api_key']
+        self.url = config['site']['base_url']
+        if self.url[:4] != 'http':
+            self.url = 'http://'+self.url
+
         self.http = httplib2.Http()
 
-    def getConfig(self, name):
-        return self.config[name]
-
     def sendUpdate(self, text):
-        url = "%s/updates.json?%s" % (self.getConfig("base_url"), urllib.urlencode({'api_key':self.getConfig('api_key')}))
-        type = "POST"
-        data = "update[human_message]=%s" % unicode(text).encode('utf-8')
+        url = '%s/updates.json?%s' % (self.url, urllib.urlencode({'api_key':self.api_key}))
+        type = 'POST'
+        data = 'update[human_message]=%s' % unicode(text).encode('utf-8')
         res = json.loads(self.http.request(url, type, data)[1])
         return (res.get('error') is None), res
 
     def getUpdates(self):
-        url = "%s/updates.json?%s" % (self.getConfig("base_url"), urllib.urlencode({'api_key':self.getConfig('api_key'),'limit':15}))
-        type = "GET"
+        url = '%s/updates.json?%s' % (self.url, urllib.urlencode({'api_key':self.api_key,'limit':15}))
+        type = 'GET'
         res = json.loads(self.http.request(url, type)[1])
         return res
 
     def getLastUpdate(self):
-        url = "%s/updates/last.json?%s" % (self.getConfig("base_url"), urllib.urlencode({'api_key':self.getConfig('api_key'),'limit':15}))
-        type = "GET"
+        url = '%s/updates/last.json?%s' % (self.url, urllib.urlencode({'api_key':self.api_key,'limit':15}))
+        type = 'GET'
         res = json.loads(self.http.request(url, type)[1])
         return (res if res.get('error') is None else None)
 
     def finishLast(self):
-        url = "%s/updates/finish_last.json?%s" % (self.getConfig("base_url"), urllib.urlencode({'api_key':self.getConfig('api_key')}))
-        type = "POST"
+        url = '%s/updates/finish_last.json?%s' % (self.url, urllib.urlencode({'api_key':self.api_key}))
+        type = 'POST'
         json.loads(self.http.request(url, type)[1])
+
 
 class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
 
-        self.remote = Remote()
+        self.config = Config()
+        self.config.read()
+        self.config.set_defaults()
+
+        self.remote = Remote(self.config)
 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setupUi(self)
@@ -73,33 +112,45 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
         self.gb_current.hide()
 
-        self.move(400, 50)
-        self.resize(350, 550)
+        self.move(  self.config['qttt']['geometry']['left'],
+                    self.config['qttt']['geometry']['top'] )
+        self.resize(self.config['qttt']['geometry']['width'],
+                    self.config['qttt']['geometry']['height'] )
+
+        self.setWindowTitle('QTTT - %s' % self.config['site']['base_url'])
 
         self.lb_current.setWordWrap(True)
-        self.setWindowTitle("QTTT - %s" % self.remote.getConfig('base_url'))
 
         self.updates_layout = QtGui.QVBoxLayout(self.scrollAreaWidgetContents)
         self.updates_layout.setMargin(1)
 
-        self.connect(self.action_Qt,    QtCore.SIGNAL("activated()"),       QtGui.qApp.aboutQt)
-        self.connect(self.pb_update,    QtCore.SIGNAL("clicked()"),         self.sendUpdate)
-        self.connect(self.le_update,    QtCore.SIGNAL("returnPressed()"),   self.sendUpdate)
-        self.connect(self.pb_stop,      QtCore.SIGNAL("clicked()"),         self.finishLast)
-        self.connect(self.tray,         QtCore.SIGNAL("activated(QSystemTrayIcon::ActivationReason)"), self.trayActivated)
+        self.connect(self.action_Qt,    QtCore.SIGNAL('activated()'),       QtGui.qApp.aboutQt)
+        self.connect(self.pb_update,    QtCore.SIGNAL('clicked()'),         self.sendUpdate)
+        self.connect(self.le_update,    QtCore.SIGNAL('returnPressed()'),   self.sendUpdate)
+        self.connect(self.pb_stop,      QtCore.SIGNAL('clicked()'),         self.finishLast)
+        self.connect(self.tray,         QtCore.SIGNAL('activated(QSystemTrayIcon::ActivationReason)'), self.trayActivated)
+        self.connect(QtGui.qApp,        QtCore.SIGNAL('lastWindowClosed()'),self.writeConfig)
 
         self.refresh_timer = QtCore.QTimer()
         self.refresh_timer.setInterval(5*60*1000) # 5 minutes
-        self.connect(self.refresh_timer, QtCore.SIGNAL("timeout()"), self.getUpdates)
+        self.connect(self.refresh_timer, QtCore.SIGNAL('timeout()'), self.getUpdates)
         self.refresh_timer.start()
 
         self.last_update_timer = QtCore.QTimer()
         self.last_update_timer.setInterval(1000) # 1 second
-        self.connect(self.last_update_timer, QtCore.SIGNAL("timeout()"), self.refreshLastUpdateTime)
+        self.connect(self.last_update_timer, QtCore.SIGNAL('timeout()'), self.refreshLastUpdateTime)
 
         self.updates = {}
         self.last_update = None
         self.getUpdates()
+
+    def writeConfig(self):
+        self.config['qttt']['geometry']['width'] = self.size().width()
+        self.config['qttt']['geometry']['height'] = self.size().height()
+        self.config['qttt']['geometry']['left'] = self.pos().x()
+        self.config['qttt']['geometry']['top'] = self.pos().y()
+
+        self.config.write()
 
     def showMessage(self, title, message, status=None, only_status=False):
         self.statusBar().showMessage(status if status else message, 5000)
@@ -124,7 +175,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
     def refreshLastUpdateTime(self):
         now = datetime.datetime.now(dateutil.tz.tzlocal())
         delta = dateutil.relativedelta.relativedelta(now, self.last_update_started_at)
-        self.lb_time.setText("%02i:%02i:%02i" % (delta.hours, delta.minutes, delta.seconds))
+        self.lb_time.setText('%02i:%02i:%02i' % (delta.hours, delta.minutes, delta.seconds))
 
     def sendUpdate(self):
         text = self.le_update.text()
@@ -134,16 +185,16 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
         res = self.remote.sendUpdate(text)
         if res[0]:
-            self.showMessage(u"Отправка апдейта", u"Апдейт успешно отправлен", only_status = True)
+            self.showMessage(u'Отправка апдейта', u'Апдейт успешно отправлен', only_status = True)
             self.le_update.clear()
 
         else:
             errors = res[1]['error']
             if len(res[1]['error']) > 1:
-                text = u"Произошли ошибки:\n%s"
+                text = u'Произошли ошибки:\n%s'
             else:
-                text = u"Произошла ошибка:\n%s"
-            self.showMessage(u"Отправка апдейта", text % "\n".join(errors), u"Произошли ошибки")
+                text = u'Произошла ошибка:\n%s'
+            self.showMessage(u'Отправка апдейта', text % '\n'.join(errors), u'Произошли ошибки')
 
         self.getUpdates()
 
@@ -187,8 +238,10 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
                         QtGui.QSystemTrayIcon.MiddleClick ):
             self.setVisible(not self.isVisible())
 
-
 app = QtGui.QApplication(sys.argv)
+
 main = MainWindow()
 main.show()
+
 sys.exit(app.exec_())
+
