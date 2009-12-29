@@ -140,6 +140,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.last_update_timer.setInterval(1000) # 1 second
         self.connect(self.last_update_timer, QtCore.SIGNAL('timeout()'), self.refreshLastUpdateTime)
 
+        self.last_update_date = None # date of last got status or update
         self.updates = {}
         self.last_update = None
         self.getUpdates()
@@ -158,12 +159,22 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
             self.tray.showMessage(title, message)
 
     def showUpdate(self, upd):
+        # show DATE label if new date started
+        if self.last_update_date is None or upd.started_at.date() > self.last_update_date:
+            label = QtGui.QLabel(self.sa_updates)
+            label.setAlignment(QtCore.Qt.AlignHCenter)
+            label.setTextFormat(QtCore.Qt.RichText)
+            label.setText('<h3>%s</h3>' % upd.started_at.date().strftime('%A, %d.%m.%y').decode('utf-8'))
+            self.updates_layout.insertWidget(0, label)
+
+        self.last_update_date = upd.started_at.date()
+
         upd.widget.setParent(self.sa_updates)
-        self.updates_layout.insertWidget(0, upd.widget)
+        self.updates_layout.insertWidget(1, upd.widget)
 
     def showLastUpdate(self, u):
         self.lb_current.setText(u.message)
-        self.last_update_started_at = dateutil.parser.parse(u.started_at) # it's easy to remember this time
+        self.last_update_started_at = u.started_at # it's easy to remember this time
         self.refreshLastUpdateTime()
         self.last_update_timer.start()
         self.gb_current.show()
@@ -208,7 +219,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
             if upd['id'] in self.updates:
                 # refresh if it is needed
                 old = self.updates[upd['id']]
-                if old.updated_at < upd['updated_at']:
+                if old.updated_at < dateutil.parser.parse(upd['updated_at']):
                     old.refresh(upd)
             else:
                 # create and show

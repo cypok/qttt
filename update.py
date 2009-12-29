@@ -2,6 +2,8 @@
 
 from PyQt4 import QtCore, QtGui
 
+import dateutil.parser
+
 class Update:
     def __init__(self, json):
         self.id = int(json['id'])
@@ -14,9 +16,12 @@ class Update:
 
     def refresh(self, json):
         self.message = json['human_message']
-        self.started_at = json['started_at']
-        self.finished_at = json['finished_at']
-        self.updated_at = json['updated_at']
+        self.started_at = dateutil.parser.parse(json['started_at'])
+        if json['finished_at'] is not None:
+            self.finished_at = dateutil.parser.parse(json['finished_at'])
+        else:
+            self.finished_at = None
+        self.updated_at = dateutil.parser.parse(json['updated_at'])
         self.kind = json['kind']
         self.hours = float(json['hours']) if json.get('hours') else None
 
