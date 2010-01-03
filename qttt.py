@@ -59,8 +59,6 @@ class Remote:
     def __init__(self, config):
         self.api_key = config['site']['api_key']
         self.url = config['site']['base_url']
-        if self.url[:4] != 'http':
-            self.url = 'http://'+self.url
 
         self.http = httplib2.Http()
 
