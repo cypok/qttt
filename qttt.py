@@ -10,6 +10,7 @@ import yaml
 import json
 import httplib2
 import urllib
+import time
 import datetime
 import dateutil.parser
 import dateutil.tz
@@ -69,8 +70,11 @@ class Remote:
         res = json.loads(self.http.request(url, type, data)[1])
         return (res.get('error') is None), res
 
-    def getUpdates(self):
-        url = '%s/updates.json?%s' % (self.url, urllib.urlencode({'api_key':self.api_key,'limit':15}))
+    def getUpdates(self, since=None):
+        params = {'api_key':self.api_key,'limit':15}
+        if since:
+            params['since'] = since
+        url = '%s/updates.json?%s' % (self.url, urllib.urlencode(params))
         type = 'GET'
         res = json.loads(self.http.request(url, type)[1])
         return res
@@ -138,7 +142,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.last_update_timer.setInterval(1000) # 1 second
         self.connect(self.last_update_timer, QtCore.SIGNAL('timeout()'), self.refreshLastUpdateTime)
 
-        self.last_update_date = None # date of last got status or update
+        self.last_timeline_date = None # date of last got status or update
+        self.last_timeline_refresh = None # time of last refreshing (servers timestamp)
         self.updates = {}
         self.last_update = None
         self.getUpdates()
@@ -158,14 +163,14 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
     def showUpdate(self, upd):
         # show DATE label if new date started
-        if self.last_update_date is None or upd.started_at.date() > self.last_update_date:
+        if self.last_timeline_date is None or upd.started_at.date() > self.last_timeline_date:
             label = QtGui.QLabel(self.sa_updates)
             label.setAlignment(QtCore.Qt.AlignHCenter)
             label.setTextFormat(QtCore.Qt.RichText)
             label.setText('<h3>%s</h3>' % upd.started_at.date().strftime('%A, %d.%m.%y').decode('utf-8'))
             self.updates_layout.insertWidget(0, label)
 
-        self.last_update_date = upd.started_at.date()
+        self.last_timeline_date = upd.started_at.date()
 
         upd.widget.setParent(self.sa_updates)
         self.updates_layout.insertWidget(1, upd.widget)
@@ -209,15 +214,20 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
     def getUpdates(self):
         # get all updates
-        all_updates = self.remote.getUpdates()
+        all_updates = self.remote.getUpdates(self.last_timeline_refresh)
         last_update = self.remote.getLastUpdate()
 
         all_updates.reverse() # cause we got reversed in time array
         for upd in all_updates:
+            updated_at = dateutil.parser.parse(upd['updated_at'])
+            refresh = time.mktime(updated_at.timetuple())
+            if self.last_timeline_refresh is None or self.last_timeline_refresh < refresh:
+                self.last_timeline_refresh = refresh
+
             if upd['id'] in self.updates:
                 # refresh if it is needed
                 old = self.updates[upd['id']]
-                if old.updated_at < dateutil.parser.parse(upd['updated_at']):
+                if old.updated_at < updated_at:
                     old.refresh(upd)
             else:
                 # create and show
