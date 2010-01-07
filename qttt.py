@@ -14,6 +14,7 @@ import datetime
 import dateutil.parser
 import dateutil.tz
 import dateutil.relativedelta
+import thread
 
 from update import Update
 from update import UpdatesStorage
@@ -147,7 +148,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.connect(self.last_update_timer, QtCore.SIGNAL('timeout()'), self.refreshLastUpdateTime)
 
         self.storage.loadUpdatesFromDB()
-        QtCore.QTimer.singleShot(0, self.getUpdates)
+        self.getUpdates()
 
     def writeConfig(self):
         self.config['qttt']['geometry']['width'] = self.size().width()
