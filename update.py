@@ -116,6 +116,16 @@ class UpdatesStorage:
             # refresh if it is needed
             if upd.updated_at < updated_at:
                 upd.refreshFromJSON(upd_json)
+
+            self.cursor.execute(
+              """UPDATE updates
+                 SET user=?,message=?,kind=?,
+                     hours=?,started_at=?,finished_at=?,updated_at=?
+                 WHERE uuid = ?""",
+              list(upd.sqlTuple())[1:] + [upd.uuid]
+            )
+            self.connection.commit()
+
         else:
             # create and show
             upd = Update()
@@ -124,5 +134,9 @@ class UpdatesStorage:
 
             self.updates[upd_json['uuid']] = upd
         
-        self.cursor.execute('INSERT INTO updates VALUES(?,?,?,?,?,?,?,?)', upd.sqlTuple())
-        self.connection.commit()
+            self.cursor.execute(
+              """INSERT INTO updates
+                 VALUES(?,?,?,?,?,?,?,?)""",
+              upd.sqlTuple()
+            )
+            self.connection.commit()
