@@ -7,27 +7,49 @@ import sqlite3
 import os
 import time
 
+
+
 class Update:
-    def __init__(self, json):
+    @staticmethod
+    def sqlTimeFormat(time):
+        return time.isoformat() if time else None
+
+    def __init__(self, json=None):
+        self.widget = QtGui.QTextBrowser()
+    
+    def initializeFromJSON(self, json):
         self.uuid = json['uuid']
         self.user = json['user']['nickname']
-    
-        self.widget = QtGui.QTextBrowser()
+        self.refreshFromJSON(json)
 
-        self.refresh(json)
+    def sqlTuple(self):
+        return (self.uuid, self.user, self.message, self.kind, self.hours,
+                self.sqlTimeFormat(self.started_at), self.sqlTimeFormat(self.finished_at),
+                self.sqlTimeFormat(self.updated_at))
 
+    def initializeFromSQL(self, row):
+        self.uuid = row[0]
+        self.user = row[1]
+        self.message = row[2]
+        self.kind = row[3]
+        self.hours = row[4]
+        self.started_at = dateutil.parser.parse(row[5])
+        self.finished_at = dateutil.parser.parse(row[6]) if row[6] else None
+        self.updated_at = dateutil.parser.parse(row[7])
 
-    def refresh(self, json):
+        self.resetHtml()
+
+    def refreshFromJSON(self, json):
         self.message = json['human_message']
-        self.started_at = dateutil.parser.parse(json['started_at'])
-        if json['finished_at'] is not None:
-            self.finished_at = dateutil.parser.parse(json['finished_at'])
-        else:
-            self.finished_at = None
-        self.updated_at = dateutil.parser.parse(json['updated_at'])
         self.kind = json['kind']
         self.hours = float(json['hours']) if json.get('hours') else None
+        self.started_at = dateutil.parser.parse(json['started_at'])
+        self.finished_at = dateutil.parser.parse(json['finished_at']) if json['finished_at'] else None
+        self.updated_at = dateutil.parser.parse(json['updated_at'])
 
+        self.resetHtml()
+
+    def resetHtml(self):
         s = u"<b><font color='#3f0afe'>@%(nick)s</font></b>: %(msg)s" % {
                 'nick': self.user,
                 'msg':self.message}
@@ -44,7 +66,9 @@ class UpdatesStorage:
         self.connection = sqlite3.connect(db_path)
         self.cursor = self.connection.cursor()
 
-        self.cursor.execute('CREATE TABLE IF NOT EXISTS updates (id INTEGER, uuid TEXT, message TEXT)')
+        self.cursor.execute(
+          'CREATE TABLE IF NOT EXISTS updates(uuid, user, message, kind, hours, started_at, finished_at, updated_at)'
+        )
         
         self.updates_layout = updates_layout
 
@@ -52,6 +76,15 @@ class UpdatesStorage:
         self.last_refresh = None # time of last refreshing (servers timestamp)
 
         self.updates = {}
+
+    def loadUpdatesFromDB(self):
+        self.cursor.execute('SELECT * FROM updates')
+        for row in self.cursor.fetchall():
+            u = Update()
+            u.initializeFromSQL(row)
+            self.showUpdate(u)
+            self.updates[u.uuid] = u
+
 
     def __del__(self):
         self.cursor.close()
@@ -72,20 +105,24 @@ class UpdatesStorage:
         upd.widget.setParent(parent) # parent = scroll area
         self.updates_layout.insertWidget(1, upd.widget)
         
-        
-    def addOrRefreshUpdate(self, upd):
-        updated_at = dateutil.parser.parse(upd['updated_at'])
+    def addOrRefreshUpdate(self, upd_json):
+        updated_at = dateutil.parser.parse(upd_json['updated_at'])
         refresh = time.mktime(updated_at.timetuple())
         if self.last_refresh is None or self.last_refresh < refresh:
             self.last_refresh = refresh
 
-        if upd['uuid'] in self.updates:
+        upd = self.updates.get(upd_json['uuid'])
+        if upd is not None:
             # refresh if it is needed
-            old = self.updates[upd['uuid']]
-            if old.updated_at < updated_at:
-                old.refresh(upd)
+            if upd.updated_at < updated_at:
+                upd.refreshFromJSON(upd_json)
         else:
             # create and show
-            self.updates[upd['uuid']] = Update(upd)
-            self.showUpdate( self.updates[upd['uuid']] )
+            upd = Update()
+            upd.initializeFromJSON(upd_json)
+            self.showUpdate(upd)
 
+            self.updates[upd_json['uuid']] = upd
+        
+        self.cursor.execute('INSERT INTO updates VALUES(?,?,?,?,?,?,?,?)', upd.sqlTuple())
+        self.connection.commit()

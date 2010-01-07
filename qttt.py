@@ -146,6 +146,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.last_update_timer.setInterval(1000) # 1 second
         self.connect(self.last_update_timer, QtCore.SIGNAL('timeout()'), self.refreshLastUpdateTime)
 
+        self.storage.loadUpdatesFromDB()
         QtCore.QTimer.singleShot(0, self.getUpdates)
 
     def writeConfig(self):
