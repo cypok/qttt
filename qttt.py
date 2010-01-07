@@ -10,13 +10,13 @@ import yaml
 import json
 import httplib2
 import urllib
-import time
 import datetime
 import dateutil.parser
 import dateutil.tz
 import dateutil.relativedelta
 
 from update import Update
+from update import UpdatesStorage
 
 class Config:
     @staticmethod
@@ -28,7 +28,7 @@ class Config:
         if len(sys.argv) > 1:
             self.config_file = sys.argv[1]
         else:
-            self.config_file = os.path.expanduser('~')+'/.tttrc'
+            self.config_file = os.path.expanduser('~/.tttrc')
         self.data = {}
 
     def read(self):
@@ -48,6 +48,8 @@ class Config:
     def set_defaults(self):
         self.set_if_empty(self.data, 'qttt', {})
 
+        self.set_if_empty(self.data['qttt'], 'db_path', '~/.ttt/updates.db')
+        
         self.set_if_empty(self.data['qttt'], 'geometry', {})
 
         self.set_if_empty(self.data['qttt']['geometry'], 'left', 400)
@@ -126,6 +128,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.updates_layout = QtGui.QVBoxLayout(self.scrollAreaWidgetContents)
         self.updates_layout.setMargin(1)
 
+        self.storage = UpdatesStorage(os.path.expanduser(self.config['qttt']['db_path']), self.updates_layout)
+
         self.connect(self.action_Qt,    QtCore.SIGNAL('activated()'),       QtGui.qApp.aboutQt)
         self.connect(self.pb_update,    QtCore.SIGNAL('clicked()'),         self.sendUpdate)
         self.connect(self.le_update,    QtCore.SIGNAL('returnPressed()'),   self.sendUpdate)
@@ -142,10 +146,6 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.last_update_timer.setInterval(1000) # 1 second
         self.connect(self.last_update_timer, QtCore.SIGNAL('timeout()'), self.refreshLastUpdateTime)
 
-        self.last_timeline_date = None # date of last got status or update
-        self.last_timeline_refresh = None # time of last refreshing (servers timestamp)
-        self.updates = {}
-        self.last_update = None
         self.getUpdates()
 
     def writeConfig(self):
@@ -161,23 +161,9 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         if not only_status:
             self.tray.showMessage(title, message)
 
-    def showUpdate(self, upd):
-        # show DATE label if new date started
-        if self.last_timeline_date is None or upd.started_at.date() > self.last_timeline_date:
-            label = QtGui.QLabel(self.sa_updates)
-            label.setAlignment(QtCore.Qt.AlignHCenter)
-            label.setTextFormat(QtCore.Qt.RichText)
-            label.setText('<h3>%s</h3>' % upd.started_at.date().strftime('%A, %d.%m.%y').decode('utf-8'))
-            self.updates_layout.insertWidget(0, label)
-
-        self.last_timeline_date = upd.started_at.date()
-
-        upd.widget.setParent(self.sa_updates)
-        self.updates_layout.insertWidget(1, upd.widget)
-
-    def showLastUpdate(self, u):
-        self.lb_current.setText(u.message)
-        self.last_update_started_at = u.started_at # it's easy to remember this time
+    def showLastUpdate(self, upd):
+        self.lb_current.setText(upd.message)
+        self.last_update_started_at = upd.started_at # it's easy to remember this time
         self.refreshLastUpdateTime()
         self.last_update_timer.start()
         self.gb_current.show()
@@ -214,32 +200,18 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
     def getUpdates(self):
         # get all updates
-        all_updates = self.remote.getUpdates(self.last_timeline_refresh)
         last_update = self.remote.getLastUpdate()
+        all_updates = self.remote.getUpdates(self.storage.last_refresh)
 
         all_updates.reverse() # cause we got reversed in time array
         for upd in all_updates:
-            updated_at = dateutil.parser.parse(upd['updated_at'])
-            refresh = time.mktime(updated_at.timetuple())
-            if self.last_timeline_refresh is None or self.last_timeline_refresh < refresh:
-                self.last_timeline_refresh = refresh
-
-            if upd['id'] in self.updates:
-                # refresh if it is needed
-                old = self.updates[upd['id']]
-                if old.updated_at < updated_at:
-                    old.refresh(upd)
-            else:
-                # create and show
-                self.updates[upd['id']] = Update(upd)
-                self.showUpdate( self.updates[upd['id']] )
+            self.storage.addOrRefreshUpdate(upd)
 
         # check we can now render last_update
         if last_update is None:
             self.hideLastUpdate()
         else:
-            if last_update['id'] in self.updates:
-                self.showLastUpdate(self.updates[last_update['id']])
+            self.showLastUpdate(self.storage.updates[last_update['uuid']])
             
 
     def finishLast(self):
