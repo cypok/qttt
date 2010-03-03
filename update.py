@@ -69,6 +69,10 @@ class UpdatesStorage:
         self.cursor.execute(
           'CREATE TABLE IF NOT EXISTS updates(uuid, user, message, kind, hours, started_at, finished_at, updated_at)'
         )
+        # and delete very old updates
+        self.cursor.execute(
+          "DELETE FROM updates WHERE (started_at < date('now','-7 days'))"
+        )
         
         self.updates_layout = updates_layout
 
@@ -78,7 +82,7 @@ class UpdatesStorage:
         self.updates = {}
 
     def loadUpdatesFromDB(self):
-        self.cursor.execute('SELECT * FROM updates')
+        self.cursor.execute('SELECT * FROM updates ORDER BY started_at')
         for row in self.cursor.fetchall():
             u = Update()
             u.initializeFromSQL(row)
