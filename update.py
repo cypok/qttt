@@ -50,11 +50,15 @@ class Update:
         self.resetHtml()
 
     def resetHtml(self):
-        s = u"<b><font color='#3f0afe'>@%(nick)s</font></b>: %(msg)s" % {
-                'nick': self.user,
-                'msg':self.message}
+        s = u"<b><font color='#3f0afe'>@%s</font></b> " % self.user
+        time = self.started_at.strftime("%H:%M")
         if self.kind == 'update':
-            s += u" <b><font color='#3d8811'>(%s ч.)</font></b>" % (self.hours if self.hours else "...")
+            s += u"<small>начал в </small>%(time)s<small> и потратил </small><b><font color='#3d8811'>%(hours)s ч.</font></b>" % {
+                    'time':time,
+                    'hours':self.hours if self.hours else '...'}
+        else:
+            s += u"<small>написал в </small>%s" % time
+        s += u"</font><hr/>%s" % self.message
         
         self.widget.setHtml(s)
 
