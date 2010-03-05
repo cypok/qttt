@@ -18,7 +18,7 @@
     <item>
      <widget class="QGroupBox" name="gb_current">
       <property name="title">
-       <string>Сейчас</string>
+       <string>Текущая активность</string>
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout">
        <item>
