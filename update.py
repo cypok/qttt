@@ -57,7 +57,7 @@ class Update:
             if self.hours:
                 s += u"потратил </small><b><font color='#3d8811'>%s ч.</font></b>" % self.hours
             else:
-                s += u"до сих пор не закончил"
+                s += u"до сих пор не закончил</small>"
         else:
             s += u"<small>написал в </small>%s" % time
         s += u"</font><hr/>%s" % self.message
