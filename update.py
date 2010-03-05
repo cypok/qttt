@@ -53,9 +53,11 @@ class Update:
         s = u"<b><font color='#3f0afe'>@%s</font></b> " % self.user
         time = self.started_at.strftime("%H:%M")
         if self.kind == 'update':
-            s += u"<small>начал в </small>%(time)s<small> и потратил </small><b><font color='#3d8811'>%(hours)s ч.</font></b>" % {
-                    'time':time,
-                    'hours':self.hours if self.hours else '...'}
+            s += u"<small>начал в </small>%s<small> и " % time
+            if self.hours:
+                s += u"потратил </small><b><font color='#3d8811'>%s ч.</font></b>" % self.hours
+            else:
+                s += u"до сих пор не закончил"
         else:
             s += u"<small>написал в </small>%s" % time
         s += u"</font><hr/>%s" % self.message
