@@ -83,7 +83,7 @@ class Remote:
         return res
 
     def getLastUpdate(self):
-        url = '%s/updates/last.json?%s' % (self.url, urllib.urlencode({'api_key':self.api_key,'limit':15}))
+        url = '%s/updates/last.json?%s' % (self.url, urllib.urlencode({'api_key':self.api_key}))
         type = 'GET'
         res = json.loads(self.http.request(url, type)[1])
         return (res if res.get('error') is None else None)
@@ -208,6 +208,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         all_updates.reverse() # cause we got reversed in time array
         for upd in all_updates:
             self.storage.addOrRefreshUpdate(upd)
+
+        self.storage.refreshLayout()
 
         # check we can now render last_update
         if last_update is None:

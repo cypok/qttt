@@ -92,8 +92,9 @@ class UpdatesStorage:
         for row in self.cursor.fetchall():
             u = Update()
             u.initializeFromSQL(row)
-            self.showUpdate(u)
             self.updates[u.uuid] = u
+
+        self.refreshLayout()
 
 
     def __del__(self):
@@ -104,7 +105,7 @@ class UpdatesStorage:
         parent = self.updates_layout.parent()
         # show DATE label if new date started
         if self.last_timeline_date is None or upd.started_at.date() > self.last_timeline_date:
-            label = QtGui.QLabel(parent)
+            label = QtGui.QLabel()
             label.setAlignment(QtCore.Qt.AlignHCenter)
             label.setTextFormat(QtCore.Qt.RichText)
             label.setText('<h3>%s</h3>' % upd.started_at.date().strftime('%A, %d.%m.%y').decode('utf-8'))
@@ -140,7 +141,6 @@ class UpdatesStorage:
             # create and show
             upd = Update()
             upd.initializeFromJSON(upd_json)
-            self.showUpdate(upd)
 
             self.updates[upd_json['uuid']] = upd
         
@@ -150,3 +150,19 @@ class UpdatesStorage:
               upd.sqlTuple()
             )
             self.connection.commit()
+    
+    def refreshLayout(self):
+        # clear layout
+        while True:
+            item = self.updates_layout.itemAt(0)
+            if item is None:
+                break
+            else:
+                self.updates_layout.removeItem(item)
+        
+        upds = self.updates.values()
+        upds.sort(lambda x,y : cmp(x.started_at, y.started_at))
+
+        self.last_timeline_date = None
+        for u in upds:
+            self.showUpdate(u)
