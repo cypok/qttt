@@ -155,13 +155,15 @@ class UpdatesStorage:
         # clear layout
         while True:
             item = self.updates_layout.itemAt(0)
+#            print str(item) if item is None else str(item.widget())
+
             if item is None:
                 break
             self.updates_layout.removeItem(item)
             # and delete labels
             if isinstance(item.widget(), QtGui.QLabel):
                 item.widget().close()
-        
+
         upds = self.updates.values()
         upds.sort(lambda x,y : cmp(x.started_at, y.started_at))
 
