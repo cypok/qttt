@@ -1,13 +1,13 @@
 # -*- coding: utf8 -*-
 
-from PyQt4 import QtCore, QtGui
+from PyQt4 import Qt, QtCore, QtGui
 
 import dateutil.parser
 import sqlite3
 import os
 import time
 
-
+from edit_update import EditUpdate
 
 class Update:
     @staticmethod
@@ -16,6 +16,21 @@ class Update:
 
     def __init__(self, json=None):
         self.widget = QtGui.QTextBrowser()
+        action_edit = QtGui.QAction(u"Редактировать", self.widget)
+        action_delete = QtGui.QAction(u"Удалить", self.widget)
+        self.widget.addAction(action_edit)
+        self.widget.addAction(action_delete)
+        self.widget.setContextMenuPolicy(2) #QtCore.ActionsContextMenu
+
+        self.widget.connect(action_edit, QtCore.SIGNAL("triggered(bool)"), self.edit_dialog)
+        self.widget.connect(action_delete, QtCore.SIGNAL("triggered(bool)"), self.delete_dialog)
+
+    def edit_dialog(self):
+        dlg = EditUpdate(self, self.widget)
+        print dlg.exec_()
+
+    def delete_dialog(self):
+        print "Oh no"
     
     def initializeFromJSON(self, json):
         self.uuid = json['uuid']
