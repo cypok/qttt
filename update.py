@@ -7,54 +7,49 @@ import sqlite3
 import os
 import time
 
-from edit_update import EditUpdate
-
 class Update:
     @staticmethod
     def sqlTimeFormat(time):
         return time.isoformat() if time else None
 
-    def __init__(self, json=None):
+    def __init__(self, remote):
+        self.remote = remote
+
         self.widget = QtGui.QTextBrowser()
-        action_edit = QtGui.QAction(u"Редактировать", self.widget)
-        action_delete = QtGui.QAction(u"Удалить", self.widget)
+        action_edit = QtGui.QAction(u'Редактировать', self.widget)
+        action_delete = QtGui.QAction(u'Удалить', self.widget)
         self.widget.addAction(action_edit)
         self.widget.addAction(action_delete)
         self.widget.setContextMenuPolicy(2) #QtCore.ActionsContextMenu
 
-        self.widget.connect(action_edit, QtCore.SIGNAL("triggered(bool)"), self.edit_dialog)
-        self.widget.connect(action_delete, QtCore.SIGNAL("triggered(bool)"), self.delete_dialog)
+        self.widget.connect(action_edit, QtCore.SIGNAL('triggered(bool)'), lambda: QtGui.qApp.activeWindow().edit_update_dialog(self))
+        self.widget.connect(action_delete, QtCore.SIGNAL('triggered(bool)'), lambda: QtGui.qApp.activeWindow().delete_update_dialog(self))
 
-    def edit_dialog(self):
-        dlg = EditUpdate(self, self.widget)
-        print dlg.exec_()
-
-    def delete_dialog(self):
-        print "Oh no"
-    
     def initializeFromJSON(self, json):
         self.uuid = json['uuid']
         self.user = json['user']['nickname']
         self.refreshFromJSON(json)
 
     def sqlTuple(self):
-        return (self.uuid, self.user, self.message, self.kind, self.hours,
+        return (self.id, self.uuid, self.user, self.message, self.kind, self.hours,
                 self.sqlTimeFormat(self.started_at), self.sqlTimeFormat(self.finished_at),
                 self.sqlTimeFormat(self.updated_at))
 
     def initializeFromSQL(self, row):
-        self.uuid = row[0]
-        self.user = row[1]
-        self.message = row[2]
-        self.kind = row[3]
-        self.hours = row[4]
-        self.started_at = dateutil.parser.parse(row[5])
-        self.finished_at = dateutil.parser.parse(row[6]) if row[6] else None
-        self.updated_at = dateutil.parser.parse(row[7])
+        self.id = row[0]
+        self.uuid = row[1]
+        self.user = row[2]
+        self.message = row[3]
+        self.kind = row[4]
+        self.hours = row[5]
+        self.started_at = dateutil.parser.parse(row[6])
+        self.finished_at = dateutil.parser.parse(row[7]) if row[7] else None
+        self.updated_at = dateutil.parser.parse(row[8])
 
         self.resetHtml()
 
     def refreshFromJSON(self, json):
+        self.id = json['id']
         self.message = json['human_message']
         self.kind = json['kind']
         self.hours = float(json['hours']) if json.get('hours') else None
@@ -80,7 +75,7 @@ class Update:
         self.widget.setHtml(s)
 
 class UpdatesStorage:
-    def __init__(self, db_path, updates_layout):
+    def __init__(self, db_path, updates_layout, remote):
         if not os.access(os.path.dirname(db_path), os.F_OK):
             # if directory not exists - create it!
             os.makedirs(os.path.dirname(db_path))
@@ -88,7 +83,7 @@ class UpdatesStorage:
         self.cursor = self.connection.cursor()
 
         self.cursor.execute(
-          'CREATE TABLE IF NOT EXISTS updates(uuid, user, message, kind, hours, started_at, finished_at, updated_at)'
+          'CREATE TABLE IF NOT EXISTS updates(id, uuid, user, message, kind, hours, started_at, finished_at, updated_at)'
         )
         # and delete very old updates
         self.cursor.execute(
@@ -96,6 +91,8 @@ class UpdatesStorage:
         )
         
         self.updates_layout = updates_layout
+
+        self.remote = remote
 
         self.last_timeline_date = None # date of last got status or update
         self.last_refresh = None # time of last refreshing (servers timestamp)
@@ -105,7 +102,7 @@ class UpdatesStorage:
     def loadUpdatesFromDB(self):
         self.cursor.execute('SELECT * FROM updates ORDER BY started_at')
         for row in self.cursor.fetchall():
-            u = Update()
+            u = Update(self.remote)
             u.initializeFromSQL(row)
             self.updates[u.uuid] = u
 
@@ -148,20 +145,20 @@ class UpdatesStorage:
                  SET user=?,message=?,kind=?,
                      hours=?,started_at=?,finished_at=?,updated_at=?
                  WHERE uuid = ?""",
-              list(upd.sqlTuple())[1:] + [upd.uuid]
+              list(upd.sqlTuple())[2:] + [upd.uuid]
             )
             self.connection.commit()
 
         else:
             # create and show
-            upd = Update()
+            upd = Update(self.remote)
             upd.initializeFromJSON(upd_json)
 
             self.updates[upd_json['uuid']] = upd
         
             self.cursor.execute(
               """INSERT INTO updates
-                 VALUES(?,?,?,?,?,?,?,?)""",
+                 VALUES(?,?,?,?,?,?,?,?,?)""",
               upd.sqlTuple()
             )
             self.connection.commit()

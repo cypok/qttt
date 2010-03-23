@@ -1,98 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
 
-import sys
 from PyQt4 import QtCore, QtGui
 
 from main_ui import Ui_MainWindow
 import os
-import yaml
-import json
-import httplib2
-import urllib
+import sys
 import datetime
 import dateutil.parser
 import dateutil.tz
 import dateutil.relativedelta
-import thread
 
 from update import Update
 from update import UpdatesStorage
+from remote import Remote
+from config import Config
 
-class Config:
-    @staticmethod
-    def set_if_empty(d, key, value):
-        if key not in d:
-            d[key] = value
-
-    def __init__(self):
-        if len(sys.argv) > 1:
-            self.config_file = sys.argv[1]
-        else:
-            self.config_file = os.path.expanduser('~/.tttrc')
-        self.data = {}
-
-    def read(self):
-        with open(self.config_file) as f:
-            self.data = yaml.load(f.read())
-
-    def write(self):
-        with open(self.config_file, 'w') as f:
-            f.write( yaml.dump(self.data, default_flow_style = False, explicit_start = True) )
-
-    def __getitem__(self, item):
-        return self.data.get(item)
-    
-    def __setitem__(self, item, value):
-        self.date[item] = value
-
-    def set_defaults(self):
-        self.set_if_empty(self.data, 'qttt', {})
-
-        self.set_if_empty(self.data['qttt'], 'db_path', '~/.ttt/updates.db')
-        
-        self.set_if_empty(self.data['qttt'], 'geometry', {})
-
-        self.set_if_empty(self.data['qttt']['geometry'], 'left', 400)
-        self.set_if_empty(self.data['qttt']['geometry'], 'top', 50)
-        self.set_if_empty(self.data['qttt']['geometry'], 'width', 350)
-        self.set_if_empty(self.data['qttt']['geometry'], 'height', 550)
-
-
-class Remote:
-    def __init__(self, config):
-        self.api_key = config['site']['api_key']
-        self.url = config['site']['base_url']
-
-        self.http = httplib2.Http()
-
-    def sendUpdate(self, text):
-        url = '%s/updates.json?%s' % (self.url, urllib.urlencode({'api_key':self.api_key}))
-        type = 'POST'
-        data = 'update[human_message]=%s' % unicode(text).encode('utf-8')
-        res = json.loads(self.http.request(url, type, data)[1])
-        return (res.get('error') is None), res
-
-    def getUpdates(self, since=None):
-        params = {'api_key':self.api_key,'limit':15}
-        if since:
-            params['since'] = since
-        url = '%s/updates.json?%s' % (self.url, urllib.urlencode(params))
-        type = 'GET'
-        res = json.loads(self.http.request(url, type)[1])
-        return res
-
-    def getLastUpdate(self):
-        url = '%s/updates/last.json?%s' % (self.url, urllib.urlencode({'api_key':self.api_key}))
-        type = 'GET'
-        res = json.loads(self.http.request(url, type)[1])
-        return (res if res.get('error') is None else None)
-
-    def finishLast(self):
-        url = '%s/updates/finish_last.json?%s' % (self.url, urllib.urlencode({'api_key':self.api_key}))
-        type = 'POST'
-        json.loads(self.http.request(url, type)[1])
-
+from edit_update import EditUpdate
 
 class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -129,7 +53,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.updates_layout = QtGui.QVBoxLayout(self.scrollAreaWidgetContents)
         self.updates_layout.setMargin(1)
 
-        self.storage = UpdatesStorage(os.path.expanduser(self.config['qttt']['db_path']), self.updates_layout)
+        self.storage = UpdatesStorage(os.path.expanduser(self.config['qttt']['db_path']),
+                self.updates_layout, self.remote)
 
         self.connect(self.action_Qt,    QtCore.SIGNAL('activated()'),       QtGui.qApp.aboutQt)
         self.connect(self.pb_update,    QtCore.SIGNAL('clicked()'),         self.sendUpdate)
@@ -199,6 +124,27 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
             self.showMessage(u'Отправка апдейта', text % '\n'.join(errors), u'Произошли ошибки')
 
         self.getUpdates()
+    
+    def edit_update_dialog(self, upd):
+        dlg = EditUpdate(upd, upd.widget)
+        if dlg.exec_() == 0:
+            return
+        upd_data = dlg.changed_update()
+        res = self.remote.editUpdate(upd.id, upd_data)
+        if res[0]:
+            self.showMessage(u'Редактирование апдейта', u'Апдейт успешно отредактирован', only_status = True)
+        else:
+            errors = res[1]['error']
+            if len(res[1]['error']) > 1:
+                text = u'Произошли ошибки:\n%s'
+            else:
+                text = u'Произошла ошибка:\n%s'
+            self.showMessage(u'Редактирование апдейта', text % '\n'.join(errors), u'Произошли ошибки')
+
+        self.getUpdates()
+
+    def delete_update_dialog(self, upd):
+        self.showMessage(u'Извините', u'Этот функционал еще не реализован')
 
     def getUpdates(self):
         # get all updates
