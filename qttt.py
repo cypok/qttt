@@ -135,7 +135,12 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
             self.showMessage(u'Редактирование апдейта', u'Апдейт успешно отредактирован', only_status = True)
         else:
             errors = res[1]['error']
-            if len(res[1]['error']) > 1:
+
+            # cause we could receive one string or list of them
+            if errors.__class__ is not list:
+                errors = [errors]
+
+            if len(errors) > 1:
                 text = u'Произошли ошибки:\n%s'
             else:
                 text = u'Произошла ошибка:\n%s'

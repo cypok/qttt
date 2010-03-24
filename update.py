@@ -16,14 +16,15 @@ class Update:
         self.remote = remote
 
         self.widget = QtGui.QTextBrowser()
-        action_edit = QtGui.QAction(u'Редактировать', self.widget)
-        action_delete = QtGui.QAction(u'Удалить', self.widget)
-        self.widget.addAction(action_edit)
-        self.widget.addAction(action_delete)
-        self.widget.setContextMenuPolicy(2) #QtCore.ActionsContextMenu
+        if (True): # self.user == current_user
+            action_edit = QtGui.QAction(u'Редактировать', self.widget)
+            action_delete = QtGui.QAction(u'Удалить', self.widget)
+            self.widget.addAction(action_edit)
+            self.widget.addAction(action_delete)
+            self.widget.setContextMenuPolicy(2) #QtCore.ActionsContextMenu
 
-        self.widget.connect(action_edit, QtCore.SIGNAL('triggered(bool)'), lambda: QtGui.qApp.activeWindow().edit_update_dialog(self))
-        self.widget.connect(action_delete, QtCore.SIGNAL('triggered(bool)'), lambda: QtGui.qApp.activeWindow().delete_update_dialog(self))
+            self.widget.connect(action_edit, QtCore.SIGNAL('triggered(bool)'), lambda: QtGui.qApp.activeWindow().edit_update_dialog(self))
+            self.widget.connect(action_delete, QtCore.SIGNAL('triggered(bool)'), lambda: QtGui.qApp.activeWindow().delete_update_dialog(self))
 
     def initializeFromJSON(self, json):
         self.uuid = json['uuid']
