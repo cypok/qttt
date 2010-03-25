@@ -22,7 +22,7 @@ class Update:
         self.widget = QtGui.QTextBrowser()
 
     def add_actions(self):
-        self.widget.setContextMenuPolicy(2) #QtCore.ActionsContextMenu
+        self.widget.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
         if (self.user == self.current_user):
             action_edit = QtGui.QAction(u'Редактировать', self.widget)
             action_delete = QtGui.QAction(u'Удалить', self.widget)
