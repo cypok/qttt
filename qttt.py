@@ -130,7 +130,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         if dlg.exec_() == 0:
             return
         upd_data = dlg.changed_update()
-        res = self.remote.editUpdate(upd.id, upd_data)
+        res = self.remote.editUpdate(upd.uuid, upd_data)
         if res[0]:
             self.showMessage(u'Редактирование апдейта', u'Апдейт успешно отредактирован', only_status = True)
         else:

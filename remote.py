@@ -16,8 +16,8 @@ class Remote:
         res = json.loads(self.http.request(url, type, data)[1])
         return (res.get('error') is None), res
 
-    def editUpdate(self, id, data):
-        url = '%s/updates/%s.json?%s' % (self.url, id, urllib.urlencode({'api_key':self.api_key}))
+    def editUpdate(self, uuid, data):
+        url = '%s/updates/%s.json?%s' % (self.url, uuid, urllib.urlencode({'api_key':self.api_key}))
         type = 'POST'
         data = '_method=put&update[human_message]=%s&update[started_at]=%s&update[finished_at]=%s&update[hours]=%s' % (
                 unicode(data['message']).encode('utf-8'),

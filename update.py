@@ -32,25 +32,23 @@ class Update:
         self.refreshFromJSON(json)
 
     def sqlTuple(self):
-        return (self.id, self.uuid, self.user, self.message, self.kind, self.hours,
+        return (self.uuid, self.user, self.message, self.kind, self.hours,
                 self.sqlTimeFormat(self.started_at), self.sqlTimeFormat(self.finished_at),
                 self.sqlTimeFormat(self.updated_at))
 
     def initializeFromSQL(self, row):
-        self.id = row[0]
-        self.uuid = row[1]
-        self.user = row[2]
-        self.message = row[3]
-        self.kind = row[4]
-        self.hours = row[5]
-        self.started_at = dateutil.parser.parse(row[6])
-        self.finished_at = dateutil.parser.parse(row[7]) if row[7] else None
-        self.updated_at = dateutil.parser.parse(row[8])
+        self.uuid = row[0]
+        self.user = row[1]
+        self.message = row[2]
+        self.kind = row[3]
+        self.hours = row[4]
+        self.started_at = dateutil.parser.parse(row[5])
+        self.finished_at = dateutil.parser.parse(row[6]) if row[6] else None
+        self.updated_at = dateutil.parser.parse(row[7])
 
         self.resetHtml()
 
     def refreshFromJSON(self, json):
-        self.id = json['id']
         self.message = json['human_message']
         self.kind = json['kind']
         self.hours = float(json['hours']) if json.get('hours') else None
@@ -84,7 +82,7 @@ class UpdatesStorage:
         self.cursor = self.connection.cursor()
 
         self.cursor.execute(
-          'CREATE TABLE IF NOT EXISTS updates(id, uuid, user, message, kind, hours, started_at, finished_at, updated_at)'
+          'CREATE TABLE IF NOT EXISTS updates(uuid, user, message, kind, hours, started_at, finished_at, updated_at)'
         )
         # and delete very old updates
         self.cursor.execute(
@@ -146,7 +144,7 @@ class UpdatesStorage:
                  SET user=?,message=?,kind=?,
                      hours=?,started_at=?,finished_at=?,updated_at=?
                  WHERE uuid = ?""",
-              list(upd.sqlTuple())[2:] + [upd.uuid]
+              list(upd.sqlTuple())[1:] + [upd.uuid]
             )
             self.connection.commit()
 
@@ -159,7 +157,7 @@ class UpdatesStorage:
         
             self.cursor.execute(
               """INSERT INTO updates
-                 VALUES(?,?,?,?,?,?,?,?,?)""",
+                 VALUES(?,?,?,?,?,?,?,?)""",
               upd.sqlTuple()
             )
             self.connection.commit()
