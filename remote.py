@@ -16,6 +16,13 @@ class Remote:
         res = json.loads(self.http.request(url, type)[1])
         return res
 
+    def getProjects(self):
+        params = {'api_key':self.api_key}
+        url = '%s/projects.json?%s' % (self.url, urllib.urlencode(params))
+        type = 'GET'
+        res = json.loads(self.http.request(url, type)[1])
+        return res
+
     def sendUpdate(self, text):
         url = '%s/updates.json?%s' % (self.url, urllib.urlencode({'api_key':self.api_key}))
         type = 'POST'
@@ -36,7 +43,7 @@ class Remote:
         return (res.get('error') is None), res
 
     def getUpdates(self, since=None):
-        params = {'api_key':self.api_key,'limit':15}
+        params = {'api_key':self.api_key,'limit':45}
         if since:
             params['since'] = since
         url = '%s/updates.json?%s' % (self.url, urllib.urlencode(params))

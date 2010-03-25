@@ -96,7 +96,7 @@ class UpdatesStorage:
         )
         # and delete very old updates
         self.cursor.execute(
-          "DELETE FROM updates WHERE (started_at < date('now','-7 days'))"
+          "DELETE FROM updates WHERE (started_at < date('now','-14 days'))"
         )
         
         self.updates_layout = updates_layout

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
 
-from PyQt4 import QtCore, QtGui
+from PyQt4 import Qt, QtCore, QtGui
 
 from main_ui import Ui_MainWindow
 import os
@@ -21,15 +21,23 @@ from edit_update import EditUpdate
 class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
+        self.setupUi(self)
 
+        # init subsystems
         self.config = Config()
         self.config.read()
         self.config.set_defaults()
 
         self.remote = Remote(self.config)
 
+        self.updates_layout = QtGui.QVBoxLayout(self.scrollAreaWidgetContents)
+        self.updates_layout.setMargin(1)
+
+        self.storage = UpdatesStorage(os.path.expanduser(self.config['qttt']['db_path']),
+                self.updates_layout, self.remote)
+
+        # gui options
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        self.setupUi(self)
 
         self.tray = QtGui.QSystemTrayIcon(self)
         
@@ -38,7 +46,6 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.setWindowIcon(icon)
         
         self.tray.show()
-
         self.gb_current.hide()
 
         self.move(  self.config['qttt']['geometry']['left'],
@@ -50,12 +57,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
         self.lb_current.setWordWrap(True)
 
-        self.updates_layout = QtGui.QVBoxLayout(self.scrollAreaWidgetContents)
-        self.updates_layout.setMargin(1)
 
-        self.storage = UpdatesStorage(os.path.expanduser(self.config['qttt']['db_path']),
-                self.updates_layout, self.remote)
-
+        # connections
         self.connect(self.action_Qt,    QtCore.SIGNAL('activated()'),       QtGui.qApp.aboutQt)
         self.connect(self.pb_update,    QtCore.SIGNAL('clicked()'),         self.sendUpdate)
         self.connect(self.le_update,    QtCore.SIGNAL('returnPressed()'),   self.sendUpdate)
@@ -71,7 +74,9 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.last_update_timer = QtCore.QTimer()
         self.last_update_timer.setInterval(1000) # 1 second
         self.connect(self.last_update_timer, QtCore.SIGNAL('timeout()'), self.refreshLastUpdateTime)
+        
 
+        # retrieve data
         try:
             user = self.remote.getUser()
         except:
@@ -83,8 +88,10 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
             # it's hard but it's WORKING! :)
             exit()
         Update.set_current_user(user['nickname'])
+
         self.storage.loadUpdatesFromDB()
         self.getUpdates()
+        self.getProjects()
 
     def writeConfig(self):
         self.config['qttt']['geometry']['width'] = self.size().width()
@@ -135,6 +142,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
             self.showMessage(u'Отправка апдейта', text % '\n'.join(errors), u'Произошли ошибки')
 
         self.getUpdates()
+        self.getProjects()
     
     def edit_update_dialog(self, upd):
         dlg = EditUpdate(upd, upd.widget)
@@ -158,6 +166,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
             self.showMessage(u'Редактирование апдейта', text % '\n'.join(errors), u'Произошли ошибки')
 
         self.getUpdates()
+        self.getProjects()
 
     def delete_update_dialog(self, upd):
         self.showMessage(u'Извините', u'Этот функционал еще не реализован')
@@ -179,10 +188,19 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         else:
             self.showLastUpdate(self.storage.updates[last_update['uuid']])
             
-
     def finishLast(self):
         self.remote.finishLast()
         self.getUpdates()
+
+    def getProjects(self):
+        # retrieve projects list
+        projs = self.remote.getProjects()['projects']
+        proj_names = map(lambda x: u'#'+x['shortname'], projs)
+
+        # set QCompleter for le_update
+        completer = QtGui.QCompleter(proj_names, self)
+        completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
+        self.le_update.setCompleter(completer)
 
     def closeEvent(self, event):
         # TODO: в трей, если нажат крестик
