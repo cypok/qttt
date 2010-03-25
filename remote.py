@@ -9,6 +9,13 @@ class Remote:
 
         self.http = httplib2.Http()
 
+    def getUser(self):
+        params = {'api_key':self.api_key}
+        url = '%s/account.json?%s' % (self.url, urllib.urlencode(params))
+        type = 'GET'
+        res = json.loads(self.http.request(url, type)[1])
+        return res
+
     def sendUpdate(self, text):
         url = '%s/updates.json?%s' % (self.url, urllib.urlencode({'api_key':self.api_key}))
         type = 'POST'
