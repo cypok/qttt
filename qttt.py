@@ -82,6 +82,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
             QtGui.QMessageBox.warning(self, u"Ошибка", u"Неверный api-key указан в .tttrc файле")
             # it's hard but it's WORKING! :)
             exit()
+        Update.set_current_user(user['nickname'])
         self.storage.loadUpdatesFromDB()
         self.getUpdates()
 

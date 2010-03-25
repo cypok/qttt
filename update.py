@@ -12,16 +12,22 @@ class Update:
     def sqlTimeFormat(time):
         return time.isoformat() if time else None
 
+    @staticmethod
+    def set_current_user(user):
+        Update.current_user = user
+
     def __init__(self, remote):
         self.remote = remote
 
         self.widget = QtGui.QTextBrowser()
-        if (True): # self.user == current_user
+
+    def add_actions(self):
+        self.widget.setContextMenuPolicy(2) #QtCore.ActionsContextMenu
+        if (self.user == self.current_user):
             action_edit = QtGui.QAction(u'Редактировать', self.widget)
             action_delete = QtGui.QAction(u'Удалить', self.widget)
             self.widget.addAction(action_edit)
             self.widget.addAction(action_delete)
-            self.widget.setContextMenuPolicy(2) #QtCore.ActionsContextMenu
 
             self.widget.connect(action_edit, QtCore.SIGNAL('triggered(bool)'), lambda: QtGui.qApp.activeWindow().edit_update_dialog(self))
             self.widget.connect(action_delete, QtCore.SIGNAL('triggered(bool)'), lambda: QtGui.qApp.activeWindow().delete_update_dialog(self))
@@ -46,6 +52,7 @@ class Update:
         self.finished_at = dateutil.parser.parse(row[6]) if row[6] else None
         self.updated_at = dateutil.parser.parse(row[7])
 
+        self.add_actions()
         self.resetHtml()
 
     def refreshFromJSON(self, json):
@@ -56,6 +63,7 @@ class Update:
         self.finished_at = dateutil.parser.parse(json['finished_at']) if json['finished_at'] else None
         self.updated_at = dateutil.parser.parse(json['updated_at'])
 
+        self.add_actions()
         self.resetHtml()
 
     def resetHtml(self):
