@@ -37,6 +37,8 @@ class Update:
         self.user = json['user']['nickname']
         self.refreshFromJSON(json)
 
+        self.add_actions()
+
     def sqlTuple(self):
         return (self.uuid, self.user, self.message, self.kind, self.hours,
                 self.sqlTimeFormat(self.started_at), self.sqlTimeFormat(self.finished_at),
@@ -52,8 +54,9 @@ class Update:
         self.finished_at = dateutil.parser.parse(row[6]) if row[6] else None
         self.updated_at = dateutil.parser.parse(row[7])
 
-        self.add_actions()
         self.resetHtml()
+
+        self.add_actions()
 
     def refreshFromJSON(self, json):
         self.message = json['human_message']
@@ -63,7 +66,6 @@ class Update:
         self.finished_at = dateutil.parser.parse(json['finished_at']) if json['finished_at'] else None
         self.updated_at = dateutil.parser.parse(json['updated_at'])
 
-        self.add_actions()
         self.resetHtml()
 
     def resetHtml(self):
