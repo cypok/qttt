@@ -29,8 +29,8 @@ class Update:
             self.widget.addAction(action_edit)
             self.widget.addAction(action_delete)
 
-            self.widget.connect(action_edit, QtCore.SIGNAL('triggered(bool)'), lambda: QtGui.qApp.activeWindow().edit_update_dialog(self))
-            self.widget.connect(action_delete, QtCore.SIGNAL('triggered(bool)'), lambda: QtGui.qApp.activeWindow().delete_update_dialog(self))
+            self.widget.connect(action_edit, QtCore.SIGNAL('triggered(bool)'), lambda: QtGui.qApp.activeWindow().editUpdateDialog(self))
+            self.widget.connect(action_delete, QtCore.SIGNAL('triggered(bool)'), lambda: QtGui.qApp.activeWindow().deleteUpdateDialog(self))
 
     def initializeFromJSON(self, json):
         self.uuid = json['uuid']
@@ -191,3 +191,16 @@ class UpdatesStorage:
         self.last_timeline_date = None
         for u in upds:
             self.showUpdate(u)
+    
+    def deleteUpdate(self, upd):
+        del self.updates[upd.uuid]
+
+        self.updates_layout.removeWidget(upd.widget)
+        upd.widget.close()
+
+        self.cursor.execute(
+          """DELETE FROM updates
+             WHERE uuid == ?""",
+          [upd.uuid]
+        )
+        self.connection.commit()

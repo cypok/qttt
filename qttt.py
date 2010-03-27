@@ -144,12 +144,12 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.getUpdates()
         self.getProjects()
     
-    def edit_update_dialog(self, upd):
+    def editUpdateDialog(self, upd):
         dlg = EditUpdate(upd, upd.widget)
         if dlg.exec_() == 0:
             return
         upd_data = dlg.changed_update()
-        res = self.remote.editUpdate(upd.uuid, upd_data)
+        res = self.remote.editUpdate(upd, upd_data)
         if res[0]:
             self.showMessage(u'Редактирование апдейта', u'Апдейт успешно отредактирован', only_status = True)
         else:
@@ -168,8 +168,26 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.getUpdates()
         self.getProjects()
 
-    def delete_update_dialog(self, upd):
-        self.showMessage(u'Извините', u'Этот функционал еще не реализован')
+    def deleteUpdateDialog(self, upd):
+        if QtGui.QMessageBox.Yes == QtGui.QMessageBox.question(self,
+                                        u'Подтверждение', u'Вы действительно хотите удалить этот апдейт?',
+                                        QtGui.QMessageBox.Yes | QtGui.QMessageBox.No):
+            res = self.remote.deleteUpdate(upd)
+            if res[0]:
+                self.showMessage(u'Удаление апдейта', u'Апдейт успешно удален', only_status = True)
+                self.storage.deleteUpdate(upd)
+            else:
+                errors = res[1]['error']
+
+                # cause we could receive one string or list of them
+                if errors.__class__ is not list:
+                    errors = [errors]
+
+                if len(errors) > 1:
+                    text = u'Произошли ошибки:\n%s'
+                else:
+                    text = u'Произошла ошибка:\n%s'
+                self.showMessage(u'Удаление апдейта', text % '\n'.join(errors), u'Произошли ошибки')
 
     def getUpdates(self):
         # get all updates
