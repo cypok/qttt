@@ -26,7 +26,7 @@ class Remote:
     def sendUpdate(self, text):
         url = '%s/updates.json?%s' % (self.url, urllib.urlencode({'api_key':self.api_key}))
         type = 'POST'
-        data = 'update[human_message]=%s' % unicode(text).encode('utf-8')
+        data = 'update[human_message]=%s' % urllib.quote_plus(unicode(text).encode('utf-8'))
         res = json.loads(self.http.request(url, type, data)[1])
         return (res.get('error') is None), res
 
@@ -34,7 +34,7 @@ class Remote:
         url = '%s/updates/%s.json?%s' % (self.url, upd.uuid, urllib.urlencode({'api_key':self.api_key}))
         type = 'POST'
         data = '_method=put&update[human_message]=%s&update[started_at]=%s&update[finished_at]=%s&update[hours]=%s' % (
-                unicode(data['message']).encode('utf-8'),
+                urllib.quote_plus(unicode(data['message']).encode('utf-8')),
                 data['started_at'].isoformat(),
                 data['finished_at'].isoformat() if data.get('finished_at') is not None else '',
                 data['hours'] if data.get('hours') is not None else ''
