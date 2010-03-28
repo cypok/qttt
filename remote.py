@@ -51,8 +51,8 @@ class Remote:
 
     def getUpdates(self, since=None):
         params = {'api_key':self.api_key,'limit':45}
-        if since:
-            params['since'] = since
+        #if since:
+            #params['since'] = since
         url = '%s/updates.json?%s' % (self.url, urllib.urlencode(params))
         type = 'GET'
         res = json.loads(self.http.request(url, type)[1])
