@@ -14,7 +14,7 @@ class EditUpdate(QtGui.QDialog, Ui_Dialog):
         self.started_at.setDateTime(update.started_at)
 
         if update.finished_at is not None:
-            self.finished_at.setDateTime(datetime2QDateTime(update.finished_at))
+            self.finished_at.setDateTime(update.finished_at)
             self.hours.setValue(update.hours)
         else:
             self.finished_at.setEnabled(False)
