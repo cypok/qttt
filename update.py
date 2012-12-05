@@ -3,6 +3,7 @@
 from PyQt4 import Qt, QtCore, QtGui
 
 import dateutil.parser
+import dateutil.tz
 import sqlite3
 import os
 import time
@@ -15,6 +16,24 @@ class Update:
     @staticmethod
     def set_current_user(user):
         Update.current_user = user
+
+    @staticmethod
+    def to_local_timezone(dt):
+        ''' Convert datetime to local timezone (before showing and editing)'''
+        if dt.tzinfo is None:
+          return dt
+        src_offset = dt.tzinfo.utcoffset(dt)
+        local_offset = dateutil.tz.tzlocal().utcoffset(dt)
+        return dt - src_offset + local_offset
+
+    @staticmethod
+    def from_local_timezone(dt, dst_tzinfo):
+        ''' Convert datetime from local timezone to dst_tzinfo's timezone (before saving)'''
+        if dst_tzinfo is None:
+          return dt
+        local_offset = dateutil.tz.tzlocal().utcoffset(dt)
+        dst_offset = dst_tzinfo.utcoffset(dt)
+        return dt - local_offset + dst_offset
 
     def __init__(self, remote):
         self.remote = remote
@@ -70,7 +89,7 @@ class Update:
 
     def resetHtml(self):
         s = u"<b><font color='#3f0afe'>@%s</font></b> " % self.user
-        time = self.started_at.strftime("%H:%M")
+        time = self.to_local_timezone( self.started_at ).strftime("%H:%M")
         if self.kind == 'update':
             s += u"<small>начал в </small>%s<small> и " % time
             if self.hours:
