@@ -143,15 +143,16 @@ class UpdatesStorage:
 
     def showUpdate(self, upd):
         parent = self.updates_layout.parent()
+        local_start_date = Update.to_local_timezone(upd.started_at).date()
         # show DATE label if new date started
-        if self.last_timeline_date is None or upd.started_at.date() > self.last_timeline_date:
+        if self.last_timeline_date is None or local_start_date > self.last_timeline_date:
             label = QtGui.QLabel()
             label.setAlignment(QtCore.Qt.AlignHCenter)
             label.setTextFormat(QtCore.Qt.RichText)
-            label.setText('<h3>%s</h3>' % upd.started_at.date().strftime('%A, %d.%m.%y').decode('utf-8'))
+            label.setText('<h3>%s</h3>' % local_start_date.strftime('%A, %d.%m.%y').decode('utf-8'))
             self.updates_layout.insertWidget(0, label)
 
-            self.last_timeline_date = upd.started_at.date()
+            self.last_timeline_date = local_start_date
 
         upd.widget.setParent(parent) # parent = scroll area
         self.updates_layout.insertWidget(1, upd.widget)
