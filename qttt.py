@@ -146,6 +146,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
     
     def continueUpdate(self, upd):
         self.le_update.setText(upd.message)
+        self.le_update.setFocus()
 
     def editUpdateDialog(self, upd):
         dlg = EditUpdate(upd, upd.widget)
