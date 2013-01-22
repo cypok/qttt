@@ -43,11 +43,14 @@ class Update:
     def add_actions(self):
         self.widget.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
         if (self.user == self.current_user):
+            action_continue = QtGui.QAction(u'Продолжить', self.widget)
             action_edit = QtGui.QAction(u'Редактировать', self.widget)
             action_delete = QtGui.QAction(u'Удалить', self.widget)
+            self.widget.addAction(action_continue)
             self.widget.addAction(action_edit)
             self.widget.addAction(action_delete)
 
+            self.widget.connect(action_continue, QtCore.SIGNAL('triggered(bool)'), lambda: QtGui.qApp.activeWindow().continueUpdate(self))
             self.widget.connect(action_edit, QtCore.SIGNAL('triggered(bool)'), lambda: QtGui.qApp.activeWindow().editUpdateDialog(self))
             self.widget.connect(action_delete, QtCore.SIGNAL('triggered(bool)'), lambda: QtGui.qApp.activeWindow().deleteUpdateDialog(self))
 

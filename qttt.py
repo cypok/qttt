@@ -144,6 +144,9 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.getUpdates()
         self.getProjects()
     
+    def continueUpdate(self, upd):
+        self.le_update.setText(upd.message)
+
     def editUpdateDialog(self, upd):
         dlg = EditUpdate(upd, upd.widget)
         if dlg.exec_() == 0:
