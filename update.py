@@ -7,6 +7,7 @@ import dateutil.tz
 import sqlite3
 import os
 import time
+import re
 
 class Update:
     @staticmethod
@@ -39,6 +40,8 @@ class Update:
         self.remote = remote
 
         self.widget = QtGui.QTextBrowser()
+        self.widget.setOpenLinks(False)
+        self.widget.connect(self.widget, QtCore.SIGNAL('anchorClicked(const QUrl&)'), lambda url: QtGui.QDesktopServices.openUrl(url))
 
     def add_actions(self):
         self.widget.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
@@ -101,7 +104,8 @@ class Update:
                 s += u"до сих пор не закончил</small>"
         else:
             s += u"<small>написал в </small>%s" % time
-        s += u"</font><hr/>%s" % self.message
+        message = re.sub(u"#(\\w+)", lambda m: u"<a href='%(base)s/projects/%(proj)s' target='_blank'>#%(proj)s</a>" % {"base": self.remote.url, "proj": m.group(1)},self.message)
+        s += u"</font><hr/>%s" % message
         
         self.widget.setHtml(s)
 
