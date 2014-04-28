@@ -41,7 +41,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
         self.tray = QtGui.QSystemTrayIcon(self)
         
-        icon = QtGui.QIcon('icon.png')
+        icon = QtGui.QIcon(os.path.join(os.path.dirname(__file__), 'icon.png'))
         self.tray.setIcon(icon)
         self.setWindowIcon(icon)
         
