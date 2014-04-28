@@ -116,11 +116,13 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
     def hideLastUpdate(self):
         self.last_update_timer.stop()
         self.gb_current.hide()
+        self.tray.setToolTip('')
 
     def refreshLastUpdateTime(self):
         now = datetime.datetime.now(dateutil.tz.tzlocal())
         delta = dateutil.relativedelta.relativedelta(now, self.last_update_started_at)
         self.lb_time.setText('%02i:%02i:%02i' % (delta.hours, delta.minutes, delta.seconds))
+        self.tray.setToolTip(self.lb_current.text() + ' ' + self.lb_time.text())
 
     def sendUpdate(self):
         text = self.le_update.text()
